@@ -14,18 +14,16 @@ import chainer.functions as F
 import chainer.links as L
 from chainer import training
 from chainer import serializers
-
-#python script
 import network_structure as nn
+
 
 # load_person classifier
 class PersonClassifier:
-    def __init__(self):
 
-        model_path = 'thibault_model5/'
+    def __init__(self, model_path, model, image_size):
+
         model_name = 'cnn_gpu.model'
-        model = nn.CNN_thibault2()
-        self.size = 50
+        self.size = image_size
 
         print ("loading classifier model...")
         serializers.load_npz(model_path+model_name, model)

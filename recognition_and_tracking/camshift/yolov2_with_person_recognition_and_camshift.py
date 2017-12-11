@@ -12,6 +12,7 @@ import chainer.functions as F
 from yolov2 import *
 from CocoPredictor import *
 from PersonClassifier import *
+from network_structure import *
 from camshift import *
 
 
@@ -49,7 +50,12 @@ if __name__ == "__main__":
         rec = initWriter(width, height, 30, save_path+args.save_name)
 
     coco_predictor = CocoPredictor()
-    person_classifier = PersonClassifier()
+
+    model_path1 = 'models/person_classifier/thibault_model5/'
+    model1 = CNN_thibault2()
+    image_size1 = 50
+    person_classifier = PersonClassifier(model_path1,model1,image_size1)
+
     th = 0.9
 
     camshift_scale = 0.1
@@ -69,7 +75,6 @@ if __name__ == "__main__":
 
         nms_results = coco_predictor(frame)
 
-        # draw result
         for result in nms_results:
             left, top = result["box"].int_left_top()
             right, bottom = result["box"].int_right_bottom()
