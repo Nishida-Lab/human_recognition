@@ -47,6 +47,8 @@ if __name__ == "__main__":
 
     person_label = []
 
+    cv2.namedWindow("video", cv2.WINDOW_NORMAL)
+
     while(True):
 
         ret, frame = cap.read()
@@ -70,11 +72,15 @@ if __name__ == "__main__":
 
                 cv2.imwrite(save_path+str(person_cnt)+'.jpg', frame[y1:y2, x1:x2])
 
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 255), 3)
+                text = '%s(%2d%%)' % (result["label"], result["probs"].max()*result["conf"]*100)
+                print(text)
+                cv2.putText(frame, text, (left, top-7), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+
                 person_label.append(0)
                 person_cnt += 1
 
-            text = '%s(%2d%%)' % (result["label"], result["probs"].max()*result["conf"]*100)
-            print(text)
+        cv2.imshow("video", frame)
 
         key = cv2.waitKey(1) & 0xFF
 

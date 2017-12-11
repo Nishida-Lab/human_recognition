@@ -1,11 +1,11 @@
-videos/
+*videos/
 images/
 __pycache__/
 data*/
 results/
 result/
 *model*/
-*result.jpg
+*.jpg
 *.avi
 *.model
 *.mov
