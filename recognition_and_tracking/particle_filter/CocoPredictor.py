@@ -13,10 +13,11 @@ import chainer.functions as F
 from yolov2 import *
 
 class CocoPredictor:
+
     def __init__(self):
 
         # hyper parameters
-        weight_file = "./yolov2_darknet.model"
+        weight_file = "models/yolov2_darknet.model"
         self.n_classes = 80
         self.n_boxes = 5
         self.detection_thresh = 0.5

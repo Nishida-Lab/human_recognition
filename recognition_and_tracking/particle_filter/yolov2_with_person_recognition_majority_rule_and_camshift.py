@@ -26,17 +26,20 @@ def initWriter(w, h, fps, save_path):
 #main
 if __name__ == "__main__":
 
+    # set some arguments
     parser = argparse.ArgumentParser(description='yolov2_darknet_predict for video')
     parser.add_argument('--video_file', '-v', type=str, default=False,help='path to video')
     parser.add_argument('--camera_ID', '-c', type=int, default=0,help='camera ID')
     parser.add_argument('--save_name', '-s', type=str, default=False,help='camera ID')
     args = parser.parse_args()
 
+    # load a video file or connect to the web camera
     if not args.video_file == False:
         cap = cv2.VideoCapture(args.video_file)
     else:
         cap = cv2.VideoCapture(args.camera_ID)
 
+    # set the writer for saving a result video
     rec = False
     if not args.save_name == False:
 
@@ -49,80 +52,110 @@ if __name__ == "__main__":
         height, width, channels = frame.shape
         rec = initWriter(width, height, 30, save_path+args.save_name)
 
+    # load YOLOv2
     coco_predictor = CocoPredictor()
 
+    # load module type CNN1
     model_path1 = 'models/person_classifier/thibault_model5/'
     model1 = CNN_thibault2()
     image_size1 = 50
-    person_classifier = PersonClassifier(model_path1,model1,image_size1)
+    person_classifier1 = PersonClassifier(model_path1,model1,image_size1)
 
+    # load module type CNN2
+    model_path2 = 'models/person_classifier/thibault_model_ultimate/'
+    model2 = CNN_thibault_ultimate()
+    image_size2 = 80
+    person_classifier2 = PersonClassifier(model_path2,model2,image_size2)
+
+    # recognition threshhold
     th = 0.9
 
+    # camshift parameters
+    dist_th = 50
     camshift_scale = 0.1
 
+    # prepare a window to show the recognition result
     cv2.namedWindow("video", cv2.WINDOW_NORMAL)
+
+    ####
     end_flag = False
     target_counter = 0
     target_center = (0,0)
     past_target_center = (0,0)
+    ###
 
+    # main loop
     while(True):
 
+        # get a frame from the video/camera
         ret, frame = cap.read()
 
-        if ret is not True or end_flag is True:
+        if ret is not True:
             break
 
-        nms_results = coco_predictor(frame)
+        # get the result of YOLOv2
+        YOLO_results = coco_predictor(frame)
 
-        for result in nms_results:
+        # extruct information from result of YOLOv2
+        for result in YOLO_results:
+
             left, top = result["box"].int_left_top()
             right, bottom = result["box"].int_right_bottom()
             color = (255, 0, 255)
 
+            # Person : result["class_id"] == 0
             if result["class_id"] == 0:
-                person_class, prob = person_classifier(frame[top:bottom, left:right])
 
-                if person_class == 1:
-                    if prob > th:
-                        color = (0,255,0)
-                        result_info = 'TARGET(%2d%%)' % (prob*100)
+                # input the person region to person_classifiers
+                person_class1, prob1 = person_classifier1(frame[top:bottom, left:right])
+                person_class2, prob2 = person_classifier2(frame[top:bottom, left:right])
 
-                        w = right-left
-                        h = bottom-top
+                # calculate the mean value of 2 probabilities
+                prob = (prob1 + prob2)*0.5
 
-                        past_target_center = target_center
-                        target_center = (left+int(w*0.5),top+int((bottom-top)*0.5))
+                #  condition for determination as "TARAGET"
+                if person_class1 == 1 and person_class2 == 1 and prob > th:
 
-                        dist = np.linalg.norm(np.asarray(past_target_center)-np.asarray(target_center))
+                    color = (0,255,0)
+                    result_info = 'TARGET(%2d%%)' % (prob*100)
 
-                        if dist < 50:
-                            # tracking with camshift
-                            end_flag = camshift(cap,rec, \
-                                                target_center[0]-int(w*camshift_scale), \
-                                                target_center[1]-2*int(h*camshift_scale), \
-                                                int(w*camshift_scale), \
-                                                int(h*camshift_scale))
+                    w = right-left
+                    h = bottom-top
 
-                            # end_flag = camsift(cap,rec, left, top, width, height)
+                    past_target_center = target_center
+                    target_center = (left+int(w*0.5),top+int((bottom-top)*0.5))
 
-                        cv2.circle(frame, target_center, 2, (0, 215, 253), 2)
+                    dist = np.linalg.norm(np.asarray(past_target_center)-np.asarray(target_center))
 
-                    else:
-                        result_info = 'OTHERS(%2d%%)' % ((1.0-prob)*100)
+                    if dist < dist_th:
+                        # tracking with camshift
+                        end_flag = camshift(cap,rec, \
+                                            target_center[0]-int(w*camshift_scale), \
+                                            target_center[1]-2*int(h*camshift_scale), \
+                                            int(w*camshift_scale), \
+                                            int(h*camshift_scale))
+
+                        # end_flag = camsift(cap,rec, left, top, width, height)
+
+                    cv2.circle(frame, target_center, 2, (0, 215, 253), 2)
+
                 else:
                     result_info = 'OTHERS(%2d%%)' % ((1.0-prob)*100)
 
-                #print(result_info)
+                print(result_info)
 
+                # draw the result to the frame
                 cv2.putText(frame, result_info, (left, bottom+25),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
                 cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
 
         cv2.putText(frame, 'Searching with YOLOv2...', (10,18),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 255), 2)
+
+        # show the result
         cv2.imshow("video", frame)
 
+        # write the frame to the video
         if not args.save_name == False:
             rec.write(frame)
 
