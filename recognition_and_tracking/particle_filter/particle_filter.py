@@ -1,25 +1,19 @@
-import numpy as np
 import cv2
+# import cv2.cv as cv
+import numpy as np
+import colorsys
+from PIL import Image
 import copy
 from collections import deque
-# import argparse
-
-
-# #blue
-# # _LOWER_COLOR = np.array([80, 50, 50])
-# # _UPPER_COLOR = np.array([110, 255, 255])
-
-# #red
-# _LOWER_COLOR = np.array([0, 50, 50])
-# _UPPER_COLOR = np.array([10, 255, 255])
 
 
 class ParticleFilter:
 
-    def __init__(self, frame_size, particle_N):
+    def __init__(self,particle_N, image_size):
+
         self.SAMPLEMAX = particle_N
-        self.height = frame_size[0]
-        self.width = frame_size[1]
+        self.height = image_size[0]
+        self.width = image_size[1]
 
     def initialize(self):
         self.Y = np.random.random(self.SAMPLEMAX) * self.height
@@ -72,37 +66,21 @@ class ParticleFilter:
         return np.sum(self.Y) / float(len(self.Y)), np.sum(self.X) / float(len(self.X))
 
 
-def tracking():
+def RUN_PF(cap,pf, _LOWER_COLOR, _UPPER_COLOR, dominant_bgr, high_bgr, crop_center):
 
-    # # set some arguments
-    # parser = argparse.ArgumentParser(description='yolov2_darknet_predict for video')
-    # parser.add_argument('--video_file', '-v', type=str, default=False,help='path to video')
-    # parser.add_argument('--camera_ID', '-c', type=int, default=0,help='camera ID')
-    # # parser.add_argument('--save_name', '-s', type=str, default=False,help='camera ID')
-    # args = parser.parse_args()
+    object_size = 250
+    distance_th = 45
 
-    # # load a video file or connect to the web camera
-    # if not args.video_file == False:
-    #     cap = cv2.VideoCapture(args.video_file)
-    # else:
-    #     cap = cv2.VideoCapture(args.camera_ID)
+    trajectory_length = 20
+    trajectory_points = deque(maxlen=trajectory_length)
 
-    ret, frame = cap.read()
-
-    particle_N = 1000
-    pf = ParticleFilter(frame.shape, particle_N)
-    pf.initialize()
-
-    max_points_N = 30
-    trajectory_points = deque(maxlen=max_points_N)
-
-    cv2.namedWindow("result")
-    cv2.namedWindow("mask")
+    PF_start = False
+    center = (0,0)
+    past_center = (0,0)
 
     while True:
 
         ret, frame = cap.read()
-        # cv2.imshow("frame", frame)
         result_frame = copy.deepcopy(frame)
 
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -113,39 +91,93 @@ def tracking():
         # Start Tracking
         y, x = pf.filtering(mask)
 
-        # origin is upper left
         frame_size = frame.shape
         p_range_x = np.max(pf.X)-np.min(pf.X)
         p_range_y = np.max(pf.Y)-np.min(pf.Y)
-        # print "position_x_rate"
-        # print x/frame_size[1]
-        # print "position_y_rate"
-        # print y/frame_size[0]
 
         for i in range(pf.SAMPLEMAX):
-            cv2.circle(result_frame, (int(pf.X[i]), int(pf.Y[i])), 2, (0, 255, 0), -1)
+            cv2.circle(result_frame, (int(pf.X[i]), int(pf.Y[i])), 2, dominant_bgr, -1)
 
-        if p_range_x < 300 and p_range_y < 300:
+        if p_range_x < object_size and p_range_y < object_size:
 
+            past_center = center
             center = (int(x), int(y))
-            cv2.circle(result_frame, center, 10, (255, 0, 0), -1)
+
+            if PF_start is False:
+                past_center = crop_center
+                PF_start = True
+
+            dist = np.linalg.norm(np.asarray(past_center)-np.asarray(center))
+
+            print(dist)
+
+            if PF_start is True and dist > distance_th:
+                print("stop PF1")
+                return
+
+            cv2.circle(result_frame, center, 10, (0, 255, 255), -1)
             trajectory_points.appendleft(center)
 
-            for i in range(1, len(trajectory_points)):
-                if trajectory_points[i - 1] is None or trajectory_points[i] is None:
+            for m in range(1, len(trajectory_points)):
+                if trajectory_points[m - 1] is None or trajectory_points[m] is None:
                     continue
-                cv2.line(result_frame, trajectory_points[i-1], trajectory_points[i], (0, 255, 255), thickness=3)
+                cv2.line(result_frame, trajectory_points[m-1], trajectory_points[m], high_bgr, thickness=3)
         else:
-            trajectory_points = deque(maxlen=max_points_N)
+            # trajectory_points = deque(maxlen=trajectory_length)
+            print("stop PF2")
+            return
 
-        cv2.imshow("result", result_frame)
-        cv2.imshow("mask", mask)
+        cv2.imshow("video", result_frame)
 
         if cv2.waitKey(20) & 0xFF == 27:
             break
-    cap.release()
-    cv2.destroyAllWindows()
 
 
-if __name__ == '__main__':
-    tracking()
+def get_dominant_color(image):
+    """
+    Find a PIL image's dominant color, returning an (r, g, b) tuple.
+    """
+    image = image.convert('RGBA')
+    # Shrink the image, so we don't spend too long analysing color
+    # frequencies. We're not interpolating so should be quick.
+    image.thumbnail((200, 200))
+    max_score = 0.0
+    dominant_color = None
+
+    for count, (r, g, b, a) in image.getcolors(image.size[0] * image.size[1]):
+        # Skip 100% transparent pixels
+        if a == 0:
+            continue
+        # Get color saturation, 0-1
+        saturation = colorsys.rgb_to_hsv(r / 255.0, g / 255.0, b / 255.0)[1]
+        # Calculate luminance - integer YUV conversion from
+        # http://en.wikipedia.org/wiki/YUV
+        y = min(abs(r * 2104 + g * 4130 + b * 802 + 4096 + 131072) >> 13, 235)
+        # Rescale luminance from 16-235 to 0-1
+        y = (y - 16.0) / (235 - 16)
+        # Ignore the brightest colors
+        if y > 0.9:
+            continue
+        # Calculate the score, preferring highly saturated colors.
+        # Add 0.1 to the saturation so we don't completely ignore grayscale
+        # colors by multiplying the count by zero, but still give them a low
+        # weight.
+        score = (saturation + 0.1) * count
+        if score > max_score:
+            max_score = score
+            dominant_color = [b, g, r]
+
+    return dominant_color
+
+
+def bgr_to_hsv(bgr_color):
+    hsv = cv2.cvtColor(np.array([[[bgr_color[0], bgr_color[1], bgr_color[2]]]],
+                                dtype=np.uint8), cv2.COLOR_BGR2HSV)[0][0]
+    return (int(hsv[0]), int(hsv[1]), int(hsv[2]))
+
+
+
+def hsv_to_bgr(hsv_color):
+    bgr = cv2.cvtColor(np.array([[[hsv_color[0], hsv_color[1], hsv_color[2]]]],
+                                dtype=np.uint8),cv2.COLOR_HSV2BGR)[0][0]
+    return (int(bgr[0]), int(bgr[1]),int(bgr[2]))

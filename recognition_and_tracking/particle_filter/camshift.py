@@ -8,6 +8,7 @@ def camshift(cap, rec, initial_left, initial_top, initial_width, initial_height)
 
     # set up the ROI for tracking
     roi = frame[initial_top:initial_top+initial_height, initial_left:initial_left+initial_width]
+    cv2.imshow("ROI", roi)
     hsv_roi =  cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
 
     # 60, 32
