@@ -85,11 +85,6 @@ if __name__ == "__main__":
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
                 cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
 
-            #cv2.rectangle(frame, (left, top), (right, bottom), rec_color, 3)
-            #text = '%s(%2d%%)' % (result["label"], result["probs"].max()*result["conf"]*100)
-            #cv2.putText(frame, text, (left, top-7), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,255,255), 2)
-            #print(text)
-
         cv2.imshow("video", frame)
 
         if not args.save_name == False:
