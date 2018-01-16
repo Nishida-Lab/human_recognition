@@ -62,7 +62,7 @@ if __name__ == "__main__":
     camshift_scale = 0.1
 
     cv2.namedWindow("video", cv2.WINDOW_NORMAL)
-    # cv2.namedWindow("dominant", cv2.WINDOW_NORMAL)
+    cv2.namedWindow("dominant", cv2.WINDOW_NORMAL)
     # cv2.namedWindow("low", cv2.WINDOW_NORMAL)
     # cv2.namedWindow("high", cv2.WINDOW_NORMAL)
 
@@ -105,7 +105,7 @@ if __name__ == "__main__":
                         h = bottom-top
 
                         past_target_center = target_center
-                        target_center = (left+int(w*0.5),top+int((bottom-top)*0.5))
+                        target_center = (left+int(w*0.5),top+int(h*0.5))
 
                         dist = np.linalg.norm(np.asarray(past_target_center)-np.asarray(target_center))
 
@@ -138,8 +138,6 @@ if __name__ == "__main__":
 
                             pil_img = Image.fromarray(cv2.cvtColor(cropped_img, cv2.COLOR_BGR2RGB))
 
-                            # img = Image.open(args["image"])
-
                             dominant_bgr = get_dominant_color(pil_img)
 
                             # convert BGR to HSV
@@ -154,7 +152,6 @@ if __name__ == "__main__":
 
                             s_range = 5
                             if dominant_hsv[0] < s_range:
-                                # low_s = dominant_hsv[0]
                                 low_s = 0
                             else:
                                 low_s = dominant_hsv[0]-s_range
@@ -195,15 +192,15 @@ if __name__ == "__main__":
                             high_bgr_display = np.zeros(size, dtype=np.uint8)
                             high_bgr_display[:] = high_bgr
 
-                            # cv2.imshow("dominant", dominant_color_display)
                             # cv2.imshow("target", frame[top:bottom, left:right])
-                            # cv2.imshow("cropped image", cropped_img)
+                            cv2.imshow("cropped image", cropped_img)
+                            cv2.imshow("dominant", dominant_color_display)
                             # cv2.imshow("low", low_bgr_display)
                             # cv2.imshow("high", high_bgr_display)
 
                             RUN_PF(cap,pf,_LOWER_COLOR,_UPPER_COLOR, dominant_bgr, high_bgr, crop_center)
 
-                        cv2.circle(frame, target_center, 2, (0, 215, 253), 2)
+                        cv2.circle(frame, target_center, 5, (0, 215, 253), -1)
 
                     else:
                         target_counter = 0

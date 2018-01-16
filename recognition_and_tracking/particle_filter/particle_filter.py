@@ -66,7 +66,7 @@ class ParticleFilter:
         return np.sum(self.Y) / float(len(self.Y)), np.sum(self.X) / float(len(self.X))
 
 
-def RUN_PF(cap,pf, _LOWER_COLOR, _UPPER_COLOR, dominant_bgr, high_bgr, crop_center):
+def RUN_PF(cap, pf, _LOWER_COLOR, _UPPER_COLOR, dominant_bgr, high_bgr, crop_center):
 
     object_size = 250
     distance_th = 45
@@ -112,20 +112,22 @@ def RUN_PF(cap,pf, _LOWER_COLOR, _UPPER_COLOR, dominant_bgr, high_bgr, crop_cent
             print(dist)
 
             if PF_start is True and dist > distance_th:
-                print("stop PF1")
+                print("stop PF!: out of the distance_th")
                 return
 
-            cv2.circle(result_frame, center, 10, (0, 255, 255), -1)
+            cv2.circle(result_frame, center, 5, (0, 215, 253), -1)
             trajectory_points.appendleft(center)
 
             for m in range(1, len(trajectory_points)):
                 if trajectory_points[m - 1] is None or trajectory_points[m] is None:
                     continue
-                cv2.line(result_frame, trajectory_points[m-1], trajectory_points[m], high_bgr, thickness=3)
+                cv2.line(result_frame, trajectory_points[m-1], trajectory_points[m], high_bgr, thickness=2)
         else:
-            # trajectory_points = deque(maxlen=trajectory_length)
-            print("stop PF2")
+            print("stop PF!: diverged")
             return
+
+        cv2.putText(result_frame, 'Tracking with Particle Filter ...', (10,18),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (204, 153, 51), 2)
 
         cv2.imshow("video", result_frame)
 
