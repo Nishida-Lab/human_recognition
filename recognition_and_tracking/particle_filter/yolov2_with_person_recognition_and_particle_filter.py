@@ -62,7 +62,7 @@ if __name__ == "__main__":
     camshift_scale = 0.1
 
     cv2.namedWindow("video", cv2.WINDOW_NORMAL)
-    cv2.namedWindow("dominant", cv2.WINDOW_NORMAL)
+    # cv2.namedWindow("dominant", cv2.WINDOW_NORMAL)
     # cv2.namedWindow("low", cv2.WINDOW_NORMAL)
     # cv2.namedWindow("high", cv2.WINDOW_NORMAL)
 
@@ -71,10 +71,9 @@ if __name__ == "__main__":
     target_center = (0,0)
     past_target_center = (0,0)
 
-    particle_N = 500
     image_size = (frame.shape[0], frame.shape[1])
 
-    pf = ParticleFilter(particle_N, image_size)
+    pf = ParticleFilter(image_size)
     pf.initialize()
 
     while(True):
@@ -116,11 +115,13 @@ if __name__ == "__main__":
                             if target_counter < 5:
                                 continue
 
-                            crop_param = 3
-                            person_top = target_center[1] - int(h/crop_param)
-                            person_bottom = target_center[1]
-                            person_left = target_center[0]-int(w/crop_param)
-                            person_right = target_center[0]+int(w/crop_param)
+                            crop_param_w = 3
+                            crop_param_h = 4
+
+                            person_top = target_center[1] - int(h/crop_param_h)
+                            person_bottom = target_center[1]- int((h/crop_param_h)/2)
+                            person_left = target_center[0]-int(w/crop_param_w)
+                            person_right = target_center[0]+int(w/crop_param_w)
                             # person_left = target_center[1] - int(w/crop_param)
                             # person_right = target_center[1] + int(w/crop_param)
 
@@ -193,12 +194,12 @@ if __name__ == "__main__":
                             high_bgr_display[:] = high_bgr
 
                             # cv2.imshow("target", frame[top:bottom, left:right])
-                            cv2.imshow("cropped image", cropped_img)
-                            cv2.imshow("dominant", dominant_color_display)
+                            # cv2.imshow("cropped image", cropped_img)
+                            # cv2.imshow("dominant", dominant_color_display)
                             # cv2.imshow("low", low_bgr_display)
                             # cv2.imshow("high", high_bgr_display)
 
-                            RUN_PF(cap,pf,_LOWER_COLOR,_UPPER_COLOR, dominant_bgr, high_bgr, crop_center)
+                            RUN_PF(cap, rec, pf, _LOWER_COLOR, _UPPER_COLOR, dominant_bgr, high_bgr, crop_center)
 
                         cv2.circle(frame, target_center, 5, (0, 215, 253), -1)
 

@@ -9,9 +9,14 @@ from collections import deque
 
 class ParticleFilter:
 
-    def __init__(self,particle_N, image_size):
+    def __init__(self, image_size):
 
-        self.SAMPLEMAX = particle_N
+        # PF1
+        # self.SAMPLEMAX = 500
+
+        # PF2
+        self.SAMPLEMAX = 300
+
         self.height = image_size[0]
         self.width = image_size[1]
 
@@ -21,8 +26,14 @@ class ParticleFilter:
 
     # Need adjustment for tracking object velocity
     def modeling(self):
-        self.Y += np.random.random(self.SAMPLEMAX) * 200 - 100 # 2:1
-        self.X += np.random.random(self.SAMPLEMAX) * 200 - 100
+
+        # PF1
+        # self.Y += np.random.random(self.SAMPLEMAX) * 200 - 100 # 2:1
+        # self.X += np.random.random(self.SAMPLEMAX) * 200 - 100
+
+        # PF2
+        self.Y += np.random.random(self.SAMPLEMAX) * 100 - 50 # 2:1
+        self.X += np.random.random(self.SAMPLEMAX) * 100 - 50
 
     def normalize(self, weight):
         return weight / np.sum(weight)
@@ -39,7 +50,13 @@ class ParticleFilter:
 
     def calcLikelihood(self, image):
         # white space tracking
+
+        # PF1
+        # mean, std = 250.0, 10.0
+
+        # PF2
         mean, std = 250.0, 10.0
+
         intensity = []
 
         for i in range(self.SAMPLEMAX):
@@ -66,10 +83,15 @@ class ParticleFilter:
         return np.sum(self.Y) / float(len(self.Y)), np.sum(self.X) / float(len(self.X))
 
 
-def RUN_PF(cap, pf, _LOWER_COLOR, _UPPER_COLOR, dominant_bgr, high_bgr, crop_center):
+def RUN_PF(cap, rec, pf, _LOWER_COLOR, _UPPER_COLOR, dominant_bgr, high_bgr, crop_center):
 
-    object_size = 250
-    distance_th = 45
+    # PF1
+    # object_size = 250
+    # distance_th = 45
+
+    # PF2
+    object_size = 200
+    distance_th = 30
 
     trajectory_length = 20
     trajectory_points = deque(maxlen=trajectory_length)
@@ -98,7 +120,8 @@ def RUN_PF(cap, pf, _LOWER_COLOR, _UPPER_COLOR, dominant_bgr, high_bgr, crop_cen
         for i in range(pf.SAMPLEMAX):
             cv2.circle(result_frame, (int(pf.X[i]), int(pf.Y[i])), 2, dominant_bgr, -1)
 
-        if p_range_x < object_size and p_range_y < object_size:
+        # if p_range_x < object_size and p_range_y < object_size:
+        if p_range_x < object_size or p_range_y < object_size:
 
             past_center = center
             center = (int(x), int(y))
@@ -130,6 +153,9 @@ def RUN_PF(cap, pf, _LOWER_COLOR, _UPPER_COLOR, dominant_bgr, high_bgr, crop_cen
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (204, 153, 51), 2)
 
         cv2.imshow("video", result_frame)
+
+        if not rec == False:
+            rec.write(result_frame)
 
         if cv2.waitKey(20) & 0xFF == 27:
             break
