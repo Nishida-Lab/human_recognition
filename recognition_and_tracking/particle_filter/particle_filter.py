@@ -15,7 +15,7 @@ class ParticleFilter:
         # self.SAMPLEMAX = 500
 
         # PF2
-        self.SAMPLEMAX = 300
+        self.SAMPLEMAX = 200
 
         self.height = image_size[0]
         self.width = image_size[1]
@@ -32,8 +32,14 @@ class ParticleFilter:
         # self.X += np.random.random(self.SAMPLEMAX) * 200 - 100
 
         # PF2
-        self.Y += np.random.random(self.SAMPLEMAX) * 100 - 50 # 2:1
-        self.X += np.random.random(self.SAMPLEMAX) * 100 - 50
+        # self.Y += np.random.random(self.SAMPLEMAX) * 100 - 50 # 2:1
+        # self.X += np.random.random(self.SAMPLEMAX) * 100 - 50
+
+        # self.Y += np.random.random(self.SAMPLEMAX) * 80 - 40 # 2:1
+        # self.X += np.random.random(self.SAMPLEMAX) * 80 - 40
+
+        self.Y += np.random.random(self.SAMPLEMAX) * 40 - 20 # 2:1
+        self.X += np.random.random(self.SAMPLEMAX) * 40 - 20
 
     def normalize(self, weight):
         return weight / np.sum(weight)
@@ -55,7 +61,7 @@ class ParticleFilter:
         # mean, std = 250.0, 10.0
 
         # PF2
-        mean, std = 250.0, 10.0
+        mean, std = 250.0, 15.0
 
         intensity = []
 
@@ -90,8 +96,9 @@ def RUN_PF(cap, rec, pf, _LOWER_COLOR, _UPPER_COLOR, dominant_bgr, high_bgr, cro
     # distance_th = 45
 
     # PF2
-    object_size = 200
-    distance_th = 30
+    # object_size = 200
+    object_size = 100
+    distance_th = 15
 
     trajectory_length = 20
     trajectory_points = deque(maxlen=trajectory_length)
@@ -135,7 +142,7 @@ def RUN_PF(cap, rec, pf, _LOWER_COLOR, _UPPER_COLOR, dominant_bgr, high_bgr, cro
             print(dist)
 
             if PF_start is True and dist > distance_th:
-                print("stop PF!: out of the distance_th")
+                print("stop PF!: out of distance_th")
                 return
 
             cv2.circle(result_frame, center, 5, (0, 215, 253), -1)
