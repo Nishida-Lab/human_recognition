@@ -66,7 +66,6 @@ if __name__ == "__main__":
     crop_param_w = 3
     crop_param_h = 4
 
-    end_flag = False
     target_counter = 0
     target_center = (0,0)
     past_target_center = (0,0)
@@ -81,7 +80,7 @@ if __name__ == "__main__":
 
         ret, frame = cap.read()
 
-        if ret is not True or end_flag is True:
+        if ret is not True:
             break
 
         nms_results = coco_predictor(frame)
@@ -113,58 +112,21 @@ if __name__ == "__main__":
 
             target_counter += 1
 
-            if target_counter < 5 or dist > 50:
-                color = (0,255,0)
-                result_info = 'TARGET(%2d%%)' % (prob*100)
-                cv2.circle(frame, target_center, 5, (0, 215, 253), -1)
-                draw_result(frame, result_info, left, top, right, bottom, color)
-                continue
+            # CNNs only
+            color = (0,255,0)
+            result_info = 'TARGET(%2d%%)' % (prob*100)
+            cv2.circle(frame, target_center, 5, (0, 215, 253), -1)
+            draw_result(frame, result_info, left, top, right, bottom, color)
 
-            person_top = target_center[1] - int(h/crop_param_h)
-            person_bottom = target_center[1]- int((h/crop_param_h)/2)
-            person_left = target_center[0]-int(w/crop_param_w)
-            person_right = target_center[0]+int(w/crop_param_w)
+            # CNNs + PF
+            # if target_counter < 5 or dist > 50:
+            #     color = (0,255,0)
+            #     result_info = 'TARGET(%2d%%)' % (prob*100)
+            #     cv2.circle(frame, target_center, 5, (0, 215, 253), -1)
+            #     draw_result(frame, result_info, left, top, right, bottom, color)
+            #     continue
 
-            crop_center = (person_left+int((person_right-person_left)*0.5),
-                           person_top+int((person_bottom-person_top)*0.5))
-
-            cropped_img = frame[person_top:person_bottom, person_left:person_right]
-            print(cropped_img.shape)
-
-            pil_img = Image.fromarray(cv2.cvtColor(cropped_img, cv2.COLOR_BGR2RGB))
-
-            dominant_bgr = get_dominant_color(pil_img)
-
-            dominant_hsv = bgr_to_hsv(dominant_bgr)
-
-            # print("dominant bgr")
-            # print(dominant_bgr)
-            # print("dominant hsv")
-            # print(dominant_hsv)
-            # print()
-
-            s_range = 5
-            if dominant_hsv[0] < s_range:
-                low_s = 0
-            else:
-                low_s = dominant_hsv[0]-s_range
-
-            if dominant_hsv[0]+s_range > 179 :
-                high_s = dominant_hsv[0]
-            else:
-                high_s = dominant_hsv[0] + s_range
-
-            _LOWER_COLOR = np.array([low_s,50,50])
-            _UPPER_COLOR = np.array([high_s,255,255])
-
-            # print("lower hsv")
-            # print(_LOWER_COLOR)
-            # print("upper hsv")
-            # print(_UPPER_COLOR)
-            # print()
-
-            high_bgr = hsv_to_bgr(_UPPER_COLOR)
-            RUN_PF(cap, rec, pf, _LOWER_COLOR, _UPPER_COLOR, dominant_bgr, high_bgr, crop_center)
+            # RUN_PF(cap, rec, pf, _LOWER_COLOR, _UPPER_COLOR, dominant_bgr, high_bgr, crop_center)
 
         cv2.putText(frame, 'Searching with YOLOv2...', (10,18),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 255), 2)

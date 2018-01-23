@@ -1,8 +1,5 @@
 import cv2
-# import cv2.cv as cv
 import numpy as np
-import colorsys
-from PIL import Image
 import copy
 from collections import deque
 
@@ -141,53 +138,3 @@ def RUN_PF(cap, rec, pf, _LOWER_COLOR, _UPPER_COLOR, dominant_bgr, high_bgr, cro
 
         if cv2.waitKey(20) & 0xFF == 27:
             break
-
-
-def get_dominant_color(image):
-    """
-    Find a PIL image's dominant color, returning an (r, g, b) tuple.
-    """
-    image = image.convert('RGBA')
-    # Shrink the image, so we don't spend too long analysing color
-    # frequencies. We're not interpolating so should be quick.
-    image.thumbnail((200, 200))
-    max_score = 0.0
-    dominant_color = None
-
-    for count, (r, g, b, a) in image.getcolors(image.size[0] * image.size[1]):
-        # Skip 100% transparent pixels
-        if a == 0:
-            continue
-        # Get color saturation, 0-1
-        saturation = colorsys.rgb_to_hsv(r / 255.0, g / 255.0, b / 255.0)[1]
-        # Calculate luminance - integer YUV conversion from
-        # http://en.wikipedia.org/wiki/YUV
-        y = min(abs(r * 2104 + g * 4130 + b * 802 + 4096 + 131072) >> 13, 235)
-        # Rescale luminance from 16-235 to 0-1
-        y = (y - 16.0) / (235 - 16)
-        # Ignore the brightest colors
-        if y > 0.9:
-            continue
-        # Calculate the score, preferring highly saturated colors.
-        # Add 0.1 to the saturation so we don't completely ignore grayscale
-        # colors by multiplying the count by zero, but still give them a low
-        # weight.
-        score = (saturation + 0.1) * count
-        if score > max_score:
-            max_score = score
-            dominant_color = [b, g, r]
-
-    return dominant_color
-
-
-def bgr_to_hsv(bgr_color):
-    hsv = cv2.cvtColor(np.array([[[bgr_color[0], bgr_color[1], bgr_color[2]]]],
-                                dtype=np.uint8), cv2.COLOR_BGR2HSV)[0][0]
-    return (int(hsv[0]), int(hsv[1]), int(hsv[2]))
-
-
-
-def hsv_to_bgr(hsv_color):
-    bgr = cv2.cvtColor(np.array([[[hsv_color[0], hsv_color[1], hsv_color[2]]]],
-                                dtype=np.uint8),cv2.COLOR_HSV2BGR)[0][0]
-    return (int(bgr[0]), int(bgr[1]),int(bgr[2]))
