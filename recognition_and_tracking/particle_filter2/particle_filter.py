@@ -8,7 +8,7 @@ class ParticleFilter:
 
     def __init__(self, image_size):
 
-        self.SAMPLEMAX = 300
+        self.SAMPLEMAX = 200
         self.height = image_size[0]
         self.width = image_size[1]
 
@@ -16,11 +16,10 @@ class ParticleFilter:
         self.Y = np.random.random(self.SAMPLEMAX) * self.height
         self.X = np.random.random(self.SAMPLEMAX) * self.width
 
-    # Need adjustment for tracking object velocity
     def modeling(self):
 
-        self.Y += np.random.random(self.SAMPLEMAX) * 40 - 20 # 2:1
-        self.X += np.random.random(self.SAMPLEMAX) * 40 - 20
+        self.Y += np.random.random(self.SAMPLEMAX) * 100 - 50 # 2:1
+        self.X += np.random.random(self.SAMPLEMAX) * 100 - 50
 
     def normalize(self, weight):
         return weight / np.sum(weight)
@@ -29,29 +28,30 @@ class ParticleFilter:
         index = np.arange(self.SAMPLEMAX)
         sample = []
 
-        # choice by weight
         for i in range(self.SAMPLEMAX):
             idx = np.random.choice(index, p=weight)
             sample.append(idx)
         return sample
 
-    def calcLikelihood(self, image):
+    def calcLikelihood(self, target_center):
 
-        # white space tracking
-        mean, std = 250.0, 15.0
-
-        intensity = []
+        # sigma = 15.0
+        # sigma = 5.0
+        sigma = 200
+        dist = []
 
         for i in range(self.SAMPLEMAX):
             y, x = self.Y[i], self.X[i]
             if y >= 0 and y < self.height and x >= 0 and x < self.width:
-                intensity.append(image[int(y),int(x)])
+                d = (int(y-target_center[1])**2) + (int(x-target_center[0])**2)
+                # print("i: " + str(i) + " x: "+str(x)+" y: "+str(y)+" ")
+                dist.append(d)
             else:
-                intensity.append(-1)
+                dist.append(-1)
 
-        # normal distribution
-        weights = 1.0 / np.sqrt(2 * np.pi * std) * np.exp(-(np.array(intensity) - mean)**2 /(2 * std**2))
-        weights[intensity == -1] = 0
+        dist = np.array(dist)
+        weights = (1.0 / np.sqrt(2.0 * np.pi * sigma)) * np.exp((-dist*dist)/(2.0*(sigma**2)))
+        weights[dist == -1] = 0
         weights = self.normalize(weights)
         return weights
 
@@ -62,79 +62,69 @@ class ParticleFilter:
         self.Y = self.Y[index]
         self.X = self.X[index]
 
-        # return COG
         return np.sum(self.Y) / float(len(self.Y)), np.sum(self.X) / float(len(self.X))
 
 
-def RUN_PF(cap, rec, pf, _LOWER_COLOR, _UPPER_COLOR, dominant_bgr, high_bgr, crop_center):
+class RunParticleFilter:
 
-    # PF
-    object_size = 100
-    distance_th = 15
+        def __init__(self, pf):
 
-    trajectory_length = 20
-    trajectory_points = deque(maxlen=trajectory_length)
+            self.pf = pf
 
-    PF_start = False
-    center = (0,0)
-    past_center = (0,0)
+            self.object_size = 400
+            self.distance_th = 30 # 15
 
-    while True:
+            trajectory_length = 20
+            self.trajectory_points = deque(maxlen=trajectory_length)
 
-        ret, frame = cap.read()
-        result_frame = copy.deepcopy(frame)
+        def clear(self):
 
-        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            self.past_center = (0,0)
+            self.center = (0,0)
+            self.PF_start_flag = False
+            self.pf.initialize()
 
-        # Threshold the HSV image to get only a color
-        mask = cv2.inRange(hsv, _LOWER_COLOR, _UPPER_COLOR)
+        def RUN_PF(self, frame, target_center):
 
-        # Start Tracking
-        y, x = pf.filtering(mask)
+            cv2.circle(frame, target_center, 2, (0,0,255), -1)
 
-        frame_size = frame.shape
-        p_range_x = np.max(pf.X)-np.min(pf.X)
-        p_range_y = np.max(pf.Y)-np.min(pf.Y)
+            y, x = self.pf.filtering(target_center)
 
-        for i in range(pf.SAMPLEMAX):
-            cv2.circle(result_frame, (int(pf.X[i]), int(pf.Y[i])), 2, dominant_bgr, -1)
+            frame_size = frame.shape
+            p_range_x = np.max(self.pf.X)-np.min(self.pf.X)
+            p_range_y = np.max(self.pf.Y)-np.min(self.pf.Y)
 
-        # if p_range_x < object_size and p_range_y < object_size:
-        if p_range_x < object_size or p_range_y < object_size:
+            for i in range(self.pf.SAMPLEMAX):
+                # print("i: "+str(i)+" x: "+str(int(self.pf.X[i]))+" y: "+str(int(self.pf.Y[i])))
+                cv2.circle(frame, (int(self.pf.X[i]), int(self.pf.Y[i])), 2, (203,192,255), -1)
 
-            past_center = center
-            center = (int(x), int(y))
+            if p_range_x < self.object_size or p_range_y < self.object_size:
 
-            if PF_start is False:
-                past_center = crop_center
-                PF_start = True
+                self.past_center = self.center
+                self.center = (int(x), int(y))
 
-            dist = np.linalg.norm(np.asarray(past_center)-np.asarray(center))
+                if self.PF_start_flag is False:
+                    self.past_center = target_center
+                    self.PF_start_flag = True
 
-            print(dist)
+                dist = np.linalg.norm(np.asarray(self.past_center)-np.asarray(self.center))
 
-            if PF_start is True and dist > distance_th:
-                print("stop PF!: out of distance_th")
-                return
+                print(dist)
 
-            cv2.circle(result_frame, center, 5, (0, 215, 253), -1)
-            trajectory_points.appendleft(center)
+                if self.PF_start_flag is True and dist > self.distance_th:
+                    print("stop PF!: out of distance_th")
+                    return frame,  False #PF_flag
 
-            for m in range(1, len(trajectory_points)):
-                if trajectory_points[m - 1] is None or trajectory_points[m] is None:
-                    continue
-                cv2.line(result_frame, trajectory_points[m-1], trajectory_points[m], high_bgr, thickness=2)
-        else:
-            print("stop PF!: diverged")
-            return
+                cv2.circle(frame, self.center, 5, (180,105,255), -1)
+                self.trajectory_points.appendleft(self.center)
 
-        cv2.putText(result_frame, 'Tracking with Particle Filter ...', (10,18),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (204, 153, 51), 2)
+                for m in range(1, len(self.trajectory_points)):
+                    if self.trajectory_points[m - 1] is None or self.trajectory_points[m] is None:
+                        continue
+                    cv2.line(frame, self.trajectory_points[m-1], self.trajectory_points[m],
+                             (147,20,255), thickness=2)
+            else:
+                print("stop PF!: diverged")
+                return frame, False #PF_flag
 
-        cv2.imshow("video", result_frame)
-
-        if not rec == False:
-            rec.write(result_frame)
-
-        if cv2.waitKey(20) & 0xFF == 27:
-            break
+            return frame, True #PF_flag

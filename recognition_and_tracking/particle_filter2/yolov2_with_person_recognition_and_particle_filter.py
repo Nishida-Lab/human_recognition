@@ -28,6 +28,11 @@ def draw_result(frame, result_info, left, top, right, bottom, color):
                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
     cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
 
+# display current state
+def info(frame, message, color):
+    cv2.putText(frame, message, (10,18),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+
 #Main
 if __name__ == "__main__":
 
@@ -47,20 +52,17 @@ if __name__ == "__main__":
 
     rec = False
     if not args.save_name == False:
-
         save_path = 'results/videos/'
-
         if not os.path.isdir(save_path):
             os.makedirs(save_path)
-
         rec = initWriter(width, height, 30, save_path+args.save_name)
 
     coco_predictor = CocoPredictor()
 
-    model_path1 = 'models/person_classifier/thibault_model5/'
-    model1 = CNN_thibault2()
-    image_size1 = 50
-    person_classifier = PersonClassifier(model_path1,model1,image_size1)
+    model_path = 'models/person_classifier/thibault_model5/'
+    model = CNN_thibault2()
+    image_size = 50
+    person_classifier = PersonClassifier(model_path, model, image_size)
 
     th = 0.9
     crop_param_w = 3
@@ -73,6 +75,16 @@ if __name__ == "__main__":
 
     pf = ParticleFilter(image_size)
     pf.initialize()
+    run_pf = RunParticleFilter(pf)
+    run_pf.clear()
+    PF_flag = False
+
+    CNN_message = 'Searching with YOLOv2...'
+    PF_message = 'Tracking with YOLOv2 + Particle Filter...'
+    CNN_message_color = (255, 0, 255)
+    PF_message_color = (204, 153, 51)
+    message = CNN_message
+    message_color = CNN_message_color
 
     cv2.namedWindow("video", cv2.WINDOW_NORMAL)
 
@@ -92,18 +104,34 @@ if __name__ == "__main__":
             color = (255, 0, 255)
 
             if result["class_id"] != 0:
+                message = CNN_message
+                message_color = CNN_message_color
                 continue
 
             person_class, prob = person_classifier(frame[top:bottom, left:right])
 
+            # flag!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            print(PF_flag)
+
             if person_class != 1 or prob < th:
                 target_counter = 0
-                result_info = 'OTHERS(%2d%%)' % ((1.0-prob)*100)
-                draw_result(frame, result_info, left, top, right, bottom, color)
-                continue
+                print("ooooooo")
+                if PF_flag:
+                    print("run PF 1")
+                    frame, PF_flag = run_pf.RUN_PF(frame, past_target_center)
+                    message = PF_message
+                    message_color = PF_message_color
+                    continue
+                else:
+                    print("wwwwwwwwwww")
+                    result_info = 'OTHERS(%2d%%)' % ((1.0-prob)*100)
+                    draw_result(frame, result_info, left, top, right, bottom, color)
+                    message = CNN_message
+                    message_color = CNN_message_color
+                    continue
 
-            w = right-left
-            h = bottom-top
+            w = right - left
+            h = bottom - top
 
             past_target_center = target_center
             target_center = (left+int(w*0.5),top+int(h*0.5))
@@ -112,24 +140,25 @@ if __name__ == "__main__":
 
             target_counter += 1
 
-            # CNNs only
-            color = (0,255,0)
-            result_info = 'TARGET(%2d%%)' % (prob*100)
-            cv2.circle(frame, target_center, 5, (0, 215, 253), -1)
-            draw_result(frame, result_info, left, top, right, bottom, color)
+            # past_target_center??
 
-            # CNNs + PF
-            # if target_counter < 5 or dist > 50:
-            #     color = (0,255,0)
-            #     result_info = 'TARGET(%2d%%)' % (prob*100)
-            #     cv2.circle(frame, target_center, 5, (0, 215, 253), -1)
-            #     draw_result(frame, result_info, left, top, right, bottom, color)
-            #     continue
+            if (target_counter > 5 and dist < 50) or PF_flag:
+                print("run PF 1")
+                frame, PF_flag = run_pf.RUN_PF(frame, target_center)
+                message = PF_message
+                message_color = PF_message_color
+                continue
+            else:
+                print("qqqqqqqqqqqqqqqqqq")
+                color = (0,255,0)
+                result_info = 'TARGET(%2d%%)' % (prob*100)
+                cv2.circle(frame, target_center, 5, (0, 215, 253), -1)
+                draw_result(frame, result_info, left, top, right, bottom, color)
+                run_pf.clear()
+                message = CNN_message
+                message_color = CNN_message_color
 
-            # RUN_PF(cap, rec, pf, _LOWER_COLOR, _UPPER_COLOR, dominant_bgr, high_bgr, crop_center)
-
-        cv2.putText(frame, 'Searching with YOLOv2...', (10,18),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 255), 2)
+        info(frame, message, message_color)
         cv2.imshow("video", frame)
 
         if not args.save_name == False:
