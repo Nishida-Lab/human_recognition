@@ -8,7 +8,7 @@ class ParticleFilter:
 
     def __init__(self, image_size):
 
-        self.SAMPLEMAX = 200
+        self.SAMPLEMAX = 300
         self.height = image_size[0]
         self.width = image_size[1]
 
@@ -38,19 +38,20 @@ class ParticleFilter:
         # sigma = 15.0
         # sigma = 5.0
         sigma = 200
+        # sigma = 20
         dist = []
 
         for i in range(self.SAMPLEMAX):
             y, x = self.Y[i], self.X[i]
             if y >= 0 and y < self.height and x >= 0 and x < self.width:
                 d = (int(y-target_center[1])**2) + (int(x-target_center[0])**2)
-                # print("i: " + str(i) + " x: "+str(x)+" y: "+str(y)+" ")
                 dist.append(d)
             else:
                 dist.append(-1)
 
         dist = np.array(dist)
-        weights = (1.0 / np.sqrt(2.0 * np.pi * sigma)) * np.exp((-dist*dist)/(2.0*(sigma**2)))
+        weights = (1.0 / np.sqrt(2.0 * np.pi * sigma)) * np.exp(-(dist**2)/(2.0*(sigma**2)))
+        # weights =  np.exp(-(dist**2)/(2.0*(sigma**2)))
         weights[dist == -1] = 0
         weights = self.normalize(weights)
         return weights
@@ -70,12 +71,10 @@ class RunParticleFilter:
         def __init__(self, pf):
 
             self.pf = pf
-
             self.object_size = 400
             self.distance_th = 30 # 15
-
-            trajectory_length = 20
-            self.trajectory_points = deque(maxlen=trajectory_length)
+            self.trajectory_length = 20
+            self.trajectory_points = deque(maxlen=self.trajectory_length)
 
         def clear(self):
 
@@ -83,6 +82,7 @@ class RunParticleFilter:
             self.center = (0,0)
             self.PF_start_flag = False
             self.pf.initialize()
+            self.trajectory_points = deque(maxlen=self.trajectory_length)
 
         def RUN_PF(self, frame, target_center):
 
@@ -96,7 +96,7 @@ class RunParticleFilter:
 
             for i in range(self.pf.SAMPLEMAX):
                 # print("i: "+str(i)+" x: "+str(int(self.pf.X[i]))+" y: "+str(int(self.pf.Y[i])))
-                cv2.circle(frame, (int(self.pf.X[i]), int(self.pf.Y[i])), 2, (203,192,255), -1)
+                cv2.circle(frame, (int(self.pf.X[i]), int(self.pf.Y[i])), 2, (0,100,0), -1)
 
             if p_range_x < self.object_size or p_range_y < self.object_size:
 
@@ -109,22 +109,24 @@ class RunParticleFilter:
 
                 dist = np.linalg.norm(np.asarray(self.past_center)-np.asarray(self.center))
 
-                print(dist)
+                # print(dist)
 
                 if self.PF_start_flag is True and dist > self.distance_th:
                     print("stop PF!: out of distance_th")
+                    self.clear()
                     return frame,  False #PF_flag
 
-                cv2.circle(frame, self.center, 5, (180,105,255), -1)
+                cv2.circle(frame, self.center, 5, (0, 215, 253), -1)
                 self.trajectory_points.appendleft(self.center)
 
                 for m in range(1, len(self.trajectory_points)):
                     if self.trajectory_points[m - 1] is None or self.trajectory_points[m] is None:
                         continue
                     cv2.line(frame, self.trajectory_points[m-1], self.trajectory_points[m],
-                             (147,20,255), thickness=2)
+                             (144,238,144), thickness=2)
             else:
                 print("stop PF!: diverged")
+                self.clear()
                 return frame, False #PF_flag
 
             return frame, True #PF_flag

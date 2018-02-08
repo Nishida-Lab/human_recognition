@@ -64,9 +64,7 @@ if __name__ == "__main__":
     image_size = 50
     person_classifier = PersonClassifier(model_path, model, image_size)
 
-    th = 0.9
-    crop_param_w = 3
-    crop_param_h = 4
+    prob_th = 0.9
 
     target_counter = 0
     target_center = (0,0)
@@ -78,11 +76,15 @@ if __name__ == "__main__":
     run_pf = RunParticleFilter(pf)
     run_pf.clear()
     PF_flag = False
+    TARGET_renew_counter_ = 0
+    TARGET_renew_counter1 = 0
+    TARGET_renew_counter2 = 0
 
     CNN_message = 'Searching with YOLOv2...'
     PF_message = 'Tracking with YOLOv2 + Particle Filter...'
     CNN_message_color = (255, 0, 255)
-    PF_message_color = (204, 153, 51)
+    PF_message_color = (0, 255, 127)
+
     message = CNN_message
     message_color = CNN_message_color
 
@@ -97,6 +99,9 @@ if __name__ == "__main__":
 
         nms_results = coco_predictor(frame)
 
+        TARGET_renew_counter2 = TARGET_renew_counter1
+        TARGET_renew_counter1 = TARGET_renew_counter2
+
         for result in nms_results:
 
             left, top = result["box"].int_left_top()
@@ -110,28 +115,19 @@ if __name__ == "__main__":
 
             person_class, prob = person_classifier(frame[top:bottom, left:right])
 
-            # flag!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            print(PF_flag)
-
-            if person_class != 1 or prob < th:
-                target_counter = 0
-                print("ooooooo")
-                if PF_flag:
-                    print("run PF 1")
-                    frame, PF_flag = run_pf.RUN_PF(frame, past_target_center)
-                    message = PF_message
-                    message_color = PF_message_color
-                    continue
-                else:
-                    print("wwwwwwwwwww")
-                    result_info = 'OTHERS(%2d%%)' % ((1.0-prob)*100)
-                    draw_result(frame, result_info, left, top, right, bottom, color)
-                    message = CNN_message
-                    message_color = CNN_message_color
-                    continue
+            if person_class != 1 or prob < prob_th:
+                result_info = 'OTHERS(%2d%%)' % ((1.0-prob)*100)
+                draw_result(frame, result_info, left, top, right, bottom, color)
+                message = CNN_message
+                message_color = CNN_message_color
+                continue
 
             w = right - left
             h = bottom - top
+
+            print("TCP is renewed")
+            TARGET_renew_counter2 = TARGET_renew_counter1
+            TARGET_renew_counter1 += 1
 
             past_target_center = target_center
             target_center = (left+int(w*0.5),top+int(h*0.5))
@@ -140,16 +136,10 @@ if __name__ == "__main__":
 
             target_counter += 1
 
-            # past_target_center??
-
-            if (target_counter > 5 and dist < 50) or PF_flag:
-                print("run PF 1")
-                frame, PF_flag = run_pf.RUN_PF(frame, target_center)
-                message = PF_message
-                message_color = PF_message_color
+            if (target_counter > 5 and dist < 50):
+                PF_flag = True
                 continue
             else:
-                print("qqqqqqqqqqqqqqqqqq")
                 color = (0,255,0)
                 result_info = 'TARGET(%2d%%)' % (prob*100)
                 cv2.circle(frame, target_center, 5, (0, 215, 253), -1)
@@ -157,6 +147,23 @@ if __name__ == "__main__":
                 run_pf.clear()
                 message = CNN_message
                 message_color = CNN_message_color
+
+        if (TARGET_renew_counter1 - TARGET_renew_counter2) == 0 :
+            print("TCP is not renewed")
+            TARGET_renew_counter1 = 0
+            TARGET_renew_counter2 = 0
+            TARGET_renew_counter_ += 1
+
+        if TARGET_renew_counter_ > 3:
+            TARGET_renew_counter_ = 0
+            PF_flag = False
+            continue
+
+        if PF_flag:
+            print("Tracking with PF..")
+            frame, PF_flag = run_pf.RUN_PF(frame, target_center)
+            message = PF_message
+            message_color = PF_message_color
 
         info(frame, message, message_color)
         cv2.imshow("video", frame)
