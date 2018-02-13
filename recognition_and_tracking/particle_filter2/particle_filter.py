@@ -37,8 +37,7 @@ class ParticleFilter:
 
         # sigma = 15.0
         # sigma = 5.0
-        sigma = 200
-        # sigma = 20
+        sigma = 200.0
         dist = []
 
         for i in range(self.SAMPLEMAX):
@@ -95,7 +94,6 @@ class RunParticleFilter:
             p_range_y = np.max(self.pf.Y)-np.min(self.pf.Y)
 
             for i in range(self.pf.SAMPLEMAX):
-                # print("i: "+str(i)+" x: "+str(int(self.pf.X[i]))+" y: "+str(int(self.pf.Y[i])))
                 cv2.circle(frame, (int(self.pf.X[i]), int(self.pf.Y[i])), 2, (0,100,0), -1)
 
             if p_range_x < self.object_size or p_range_y < self.object_size:
@@ -108,8 +106,6 @@ class RunParticleFilter:
                     self.PF_start_flag = True
 
                 dist = np.linalg.norm(np.asarray(self.past_center)-np.asarray(self.center))
-
-                # print(dist)
 
                 if self.PF_start_flag is True and dist > self.distance_th:
                     print("stop PF!: out of distance_th")
