@@ -51,6 +51,8 @@ if __name__ == "__main__":
 
     ret, frame = cap.read()
     height, width, channels = frame.shape
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    print("input fps: " + str(fps))
 
     # prepare to record video
     rec = False
@@ -58,7 +60,7 @@ if __name__ == "__main__":
         save_path = 'results/videos/'
         if not os.path.isdir(save_path):
             os.makedirs(save_path)
-        rec = initWriter(width, height, 30, save_path+args.save_name)
+        rec = initWriter(width, height, fps, save_path+args.save_name)
 
     # load YOLO model and weights
     coco_predictor = CocoPredictor()
