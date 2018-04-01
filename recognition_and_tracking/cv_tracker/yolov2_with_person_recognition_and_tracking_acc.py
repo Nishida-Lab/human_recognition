@@ -56,9 +56,13 @@ if __name__ == "__main__":
     label_path = 'labels/' + args.label_file
     label_file = open(label_path,'r')
     label_list = []
+    correct_label_counter = 0
 
     for label in label_file:
-        label_list.append(int(label.split('\n')[0]))
+        l = int(label.split('\n')[0])
+        label_list.append(l)
+        if l == 1:
+            correct_label_counter += 1
 
     label_N = len(label_list)
     print("labels: "+str(label_N))
@@ -102,6 +106,7 @@ if __name__ == "__main__":
     past_target_center = (0,0)
     tracking_flag = False
     frame_counter = 0
+    detection_counter = 0
     correct_counter = 0
 
     # prepare status information
@@ -148,6 +153,7 @@ if __name__ == "__main__":
                 cv2.putText(frame, 'TARGET', (int(bbox[0]), int(bbox[1]+bbox[3])+25),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.6, tracking_display_color, 2)
                 target_ = 1
+                detection_counter += 1
                 # (49, 78, 234)
 
                 trajectory_points.appendleft(target_center)
@@ -213,6 +219,7 @@ if __name__ == "__main__":
                     cv2.circle(frame, target_center, 5, (0, 215, 253), -1)
                     draw_result(frame, result_info, left, top, right, bottom, color)
                     target_ = 1
+                    detection_counter += 1
 
         # display the total recognition result
         info(frame, message, message_color)
@@ -244,10 +251,27 @@ if __name__ == "__main__":
         # fps = cv2.getTickFrequency() / (e2 - e1)
         # print("output fps: " + str(fps))
 
+    acc = (correct_counter/label_N)*100
+    print("\n"+"acc: "+str(acc)+"\n")
+
+    acc_img = np.tile(np.uint8([245,245,245]), (height, width,1))
+
+    # cv2.putText(acc_img, "correct label: "+str(correct_label_counter), (25,50),
+    #             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,0,0), 2)
+    # cv2.putText(acc_img, "detected label: "+str(detection_counter), (25,100),
+    #             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0,255), 2)
+    cv2.putText(acc_img, "accuracy: "+str(round(acc,2))+" %", (25,150),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255,0,0), 2)
+
+    for i in range(90):
+        cv2.imshow("video", acc_img)
+        key = cv2.waitKey(1) & 0xFF
+        if key == 27:
+            break
+        if not args.save_name == False:
+            rec.write(acc_img)
+
     # end processing
     cap.release()
     if not args.save_name == False:
         rec.release()
-
-    acc = (correct_counter/label_N)*100
-    print("\n"+"acc: "+str(acc)+"\n")
