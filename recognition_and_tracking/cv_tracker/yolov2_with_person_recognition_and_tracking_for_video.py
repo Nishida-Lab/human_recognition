@@ -39,6 +39,23 @@ def setup_tracker():
     # tracker = cv2.TrackerMedianFlow_create() # MedianFlow
     return tracker
 
+# count FPS
+class fpsWithTick(object):
+    def __init__(self):
+        self._count     = 0
+        self._oldCount  = 0
+        self._freq      = 1000 / cv2.getTickFrequency()
+        self._startTime = cv2.getTickCount()
+    def get(self):
+        nowTime         = cv2.getTickCount()
+        diffTime        = (nowTime - self._startTime) * self._freq
+        self._startTime = nowTime
+        fps             = (self._count - self._oldCount) / (diffTime / 1000.0)
+        self._oldCount  = self._count
+        self._count     += 1
+        fpsRounded      = round(fps, 1)
+        return fpsRounded
+
 
 #Main
 if __name__ == "__main__":
@@ -58,8 +75,12 @@ if __name__ == "__main__":
 
     ret, frame = cap.read()
     height, width, channels = frame.shape
+    print("input size: (" + str(height) + ", " + str(width) + ")")
+
     fps = cap.get(cv2.CAP_PROP_FPS)
     print("input fps: " + str(fps))
+
+    fpsWithTick = fpsWithTick() 
 
     # prepare to record video
     rec = False
@@ -195,6 +216,9 @@ if __name__ == "__main__":
         # e2 = cv2.getTickCount()
         # fps = cv2.getTickFrequency() / (e2 - e1)
         # print("output fps: " + str(fps))
+
+        fps = fpsWithTick.get()  # FPSを計算する
+        print("output fps: " + str(fps))
 
     # end processing
     cap.release()
