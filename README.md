@@ -22,7 +22,7 @@ Human recognition project for Tsukuba Challenge.
 $ mkdir cnn_image_recognition/dataset && cd cnn_image_recognition
 $ git clone https://github.com/Nishida-Lab/human_recognition.git
 ```
-2. Download a sample dataset from following URL.
+2. Download a sample dataset from following URL.  
 https://drive.google.com/open?id=1YgOChz93w54ItvIDdwqjYVwV7zI4PFQe
 
 3. Move each directories to the directory `dataset` according to the directory structure.
@@ -33,7 +33,8 @@ https://drive.google.com/open?id=1YgOChz93w54ItvIDdwqjYVwV7zI4PFQe
 cnn_image_recognition       <- the directory you created
     ├── dataset             <- dataset
     │      ├── humans
-    │      └── backgrounds
+    │      ├── backgrounds
+    │      └── overlapped
     └── human_recognition   <- this repository
 ```
 
@@ -67,4 +68,29 @@ key Esc: close everything
 ```
 $ cd dataset_processing
 $ python show_dataset.py -dp ../../dataset/overlapped
+```
+### Dataset formats
+labels.txt
+```
+1 (orange)
+1 (orange)
+2 (blue)
+2 (blue)
+1 (orange)
+...
+```
+rectangles.txt
+```
+(center_x),(center_y),(width),(height)
+1020,372,56,124
+260,372,56,124
+696,432,160,316
+584,432,160,316
+1032,392,96,224
+248,392,96,224
+848,432,300,332
+432,432,300,332
+1096,272,140,236
+184,272,140,236
+...
 ```
