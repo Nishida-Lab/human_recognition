@@ -6,6 +6,7 @@ import numpy as np
 from numpy.random import *
 from matplotlib import pylab as plt
 import random
+import argparse
 
 # OpenCV
 import cv2
@@ -28,7 +29,7 @@ def display_dataset(dataset_path):
         label_str = label_f
         label_data.append(int(label_str))
 
-    index_list = random.sample(xrange(len(rec_data)), 5)
+    index_list = random.sample(xrange(len(rec_data)), 3)
 
     for index in index_list:
 
@@ -52,22 +53,11 @@ def display_dataset(dataset_path):
 # main
 if __name__ == '__main__':
 
-    #dataset_path = '../../dataset/images/overlaped/cource_2017/for_training/sample/'
-    #dataset_path = '../../dataset/images/overlaped/cource_2017/for_training/'
+    parser = argparse.ArgumentParser(description='image dataset for training cnn')
+    parser.add_argument('--dataset_path', '-dp', type=str, default="data",help='background image path')
+    args = parser.parse_args()
 
-    #dataset_path = '../../dataset/images/overlaped/2017_08_18/for_training/sample/'
-    #dataset_path = '../../dataset/images/overlaped/2017_08_18/for_training/original/'
-    dataset_path = '../../dataset/images/overlaped/2017_08_18/for_training/increased/'
-
-    d = 1
-    # d = 2
-    # d = 3
-    # d = 4
-    # d = 5
-    # d = 6
-    # d = 7
-
-    dataset_path = dataset_path + str(d) + '/'
+    dataset_path = args.dataset_path + '/'
 
     display_dataset(dataset_path)
 

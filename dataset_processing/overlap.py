@@ -418,9 +418,9 @@ def captions():
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='image dataset for training cnn')
-    parser.add_argument('--background_image_path', '-b', type=str, default="data",help='background image path')
-    parser.add_argument('--human_image_path', '-h', type=str, default="data",help='human image path')
-    parser.add_argument('--save_path', '-s', type=str, default="data",help='save image path')
+    parser.add_argument('--background_image_path', '-bp', type=str, default="data",help='background image path')
+    parser.add_argument('--human_image_path', '-hp', type=str, default="data",help='human image path')
+    parser.add_argument('--save_path', '-sp', type=str, default="data",help='save image path')
     args = parser.parse_args()
 
     background_image_path = args.background_image_path + '/'
