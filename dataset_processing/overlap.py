@@ -8,6 +8,7 @@ from PIL import Image
 from PIL import ImageOps
 import math
 import random
+import argparse
 
 # OpenCV
 import cv2
@@ -391,7 +392,7 @@ def creating_dataset(background_image_path, human_image_path, save_image_path):
 
 
 # print how to use this script
-def captions(d):
+def captions():
     print '\n' + \
           'Left click: change the position of the human\n' \
           'key P : expand the human\n' \
@@ -411,34 +412,23 @@ def captions(d):
           'key Q: load the next images\n' \
           'key C: confirm current number of the images\n' \
           'key Esc: close everything\n \n' \
-          'loading background images from group ' + str(d) + '\n'
 
 
 #main
 if __name__ == '__main__':
 
-    background_image_path = '../../dataset/images/backgrounds/2017_08_18/camera_1/'
-    human_image_path = '../../dataset/images/humans/'
-    save_image_path = '../../dataset/images/overlaped/2017_08_18/for_training/original/'
+    parser = argparse.ArgumentParser(description='image dataset for training cnn')
+    parser.add_argument('--background_image_path', '-b', type=str, default="data",help='background image path')
+    parser.add_argument('--human_image_path', '-h', type=str, default="data",help='human image path')
+    parser.add_argument('--save_path', '-s', type=str, default="data",help='save image path')
+    args = parser.parse_args()
 
-    # d = 1
-    # d = 2
-    # d = 3
-    # d = 4
-    # d = 5
-    # d = 6
-    # d = 7
-    # d = 8
-    # d = 9
-    # d = 10
-    d = 11
-
-    background_image_path = background_image_path + str(d) + '/'
-    save_image_path = save_image_path + str(d) + '/'
+    background_image_path = args.background_image_path + '/'
+    human_image_path = args.human_image_path + '/'
+    save_image_path = args.save_path + '/'
 
     if not os.path.isdir(save_image_path):
         os.makedirs(save_image_path)
 
-    captions(d)
-
+    captions()
     creating_dataset(background_image_path, human_image_path, save_image_path)
